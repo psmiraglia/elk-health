@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  ls:
+    build: ./logstash
+    container_name: ls
+    depends_on:
+    - es
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.5.0
+    container_name: es
+    environment:
+    - 'discovery.type=single-node'
+    ports:
+    - '9200:9200'
+  ch:
+    build: ./checker
+    container_name: ch
+    environment:
+      CHECK_INTERVAL: 10
