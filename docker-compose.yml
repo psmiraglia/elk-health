@@ -18,3 +18,5 @@ services:
     container_name: ch
     environment:
       CHECK_INTERVAL: 10
+      # Uncomment and set a valid webhook to use the Slack notification
+      #SLACK_WEBHOOK: 'https://hooks.slack.com/services/*********/*********/************************'
