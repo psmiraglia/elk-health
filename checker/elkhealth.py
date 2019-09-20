@@ -6,7 +6,6 @@ import json
 import os
 import requests
 import signal
-import sys
 import threading
 import time
 import uuid
@@ -61,7 +60,7 @@ def notify_to_slack(text):
 def task():
     # check if the old secret is on Elasticsearch
     if os.path.isfile(OLD_CHECK):
-        
+
         # get the old secret from local storage
         with open(OLD_CHECK, 'r') as oc_file:
             old_check = oc_file.readlines()[0]
@@ -96,9 +95,12 @@ def task():
 
                     return
 
-            if (    doc['message'] == old_check
-                and doc['fingerprint'] == fingerprint
-                and set(doc['tags']) >= set(tags)
+            if (
+                    doc['message'] == old_check
+                    and
+                    doc['fingerprint'] == fingerprint
+                    and
+                    set(doc['tags']) >= set(tags)
                ):
                 print('The %s check has been found' % old_check)
             else:
