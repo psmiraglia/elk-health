@@ -18,6 +18,7 @@ ELASTICSEARCH_URL = os.getenv('ELASTICSEARCH_URL', 'http://es:9200')
 LOGSTASH_URL = os.getenv('LOGSTASH_URL', 'http://ls:8080')
 OLD_CHECK = '/tmp/old_check'
 SLACK_WEBHOOK = os.getenv('SLACK_WEBHOOK', None)
+CHECKER_ID = os.getenv('CHECKER_ID', str(uuid.uuid4())[0:8])
 
 
 class ProcessKilled(Exception):
@@ -74,7 +75,8 @@ def task():
         tags = ['elkhealth_input', 'elkhealth_filter']
 
         try:
-            r = requests.get('%s/elkhealth/doc/check' % ELASTICSEARCH_URL)
+            index = 'elkhealth-%s' % CHECKER_ID
+            r = requests.get('%s/%s/doc/check' % (ELASTICSEARCH_URL, index))
             doc = r.json()['_source']
 
             print('Checking %s on Elasticseach' % old_check)
@@ -128,7 +130,8 @@ def task():
 
     # compute a new check and push on the ELK pipeline
     new_check = str(uuid.uuid4())
-    data = {'message': new_check, 'type': 'elkhealth'}
+    data = {'message': new_check, 'type': 'elkhealth',
+            'elk_checker_id': CHECKER_ID}
 
     try:
         r = requests.put(LOGSTASH_URL, json=data)

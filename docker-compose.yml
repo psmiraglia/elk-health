@@ -13,10 +13,17 @@ services:
     - 'discovery.type=single-node'
     ports:
     - '9200:9200'
-  ch:
+  ch_alpha:
     build: ./checker
-    container_name: ch
+    container_name: ch_alpha
     environment:
       CHECK_INTERVAL: 10
+      # Uncomment and set a valid webhook to use the Slack notification
+      #SLACK_WEBHOOK: 'https://hooks.slack.com/services/*********/*********/************************'
+  ch_beta:
+    build: ./checker
+    container_name: ch_beta
+    environment:
+      CHECK_INTERVAL: 15
       # Uncomment and set a valid webhook to use the Slack notification
       #SLACK_WEBHOOK: 'https://hooks.slack.com/services/*********/*********/************************'
