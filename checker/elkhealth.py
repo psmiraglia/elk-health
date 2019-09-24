@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import logging
 import os
 import requests
 import signal
@@ -19,6 +20,15 @@ LOGSTASH_URL = os.getenv('LOGSTASH_URL', 'http://ls:8080')
 OLD_CHECK = '/tmp/old_check'
 SLACK_WEBHOOK = os.getenv('SLACK_WEBHOOK', None)
 CHECKER_ID = os.getenv('CHECKER_ID', str(uuid.uuid4())[0:8])
+
+
+fmt = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)5s] %(message)s')
+sh = logging.StreamHandler()
+sh.setLevel(logging.DEBUG)
+sh.setFormatter(fmt)
+LOG = logging.getLogger('elkchecker-%s' % CHECKER_ID)
+LOG.setLevel(logging.DEBUG)
+LOG.addHandler(sh)
 
 
 class ProcessKilled(Exception):
@@ -79,19 +89,14 @@ def task():
             r = requests.get('%s/%s/doc/check' % (ELASTICSEARCH_URL, index))
             doc = r.json()['_source']
 
-            print('Checking %s on Elasticseach' % old_check)
+            LOG.info('Checking %s on Elasticseach' % old_check)
 
             for k in ['message', 'fingerprint', 'tags']:
                 if k not in doc:
                     #
                     # send someone some notification
                     #
-                    print('##')
-                    print('##')
-                    print('## Houston, we have a problem!!!')
-                    print('## The "%s" key is missing' % k)
-                    print('##')
-                    print('##')
+                    LOG.error('The %s key is missing' % k)
 
                     notify_to_slack('The %s key is missing' % k)
 
@@ -104,17 +109,13 @@ def task():
                     and
                     set(doc['tags']) >= set(tags)
                ):
-                print('The %s check has been found' % old_check)
+                LOG.info('The %s check has been found' % old_check)
+
             else:
                 #
                 # send someone some notification
                 #
-                print('##')
-                print('##')
-                print('## Houston, we have a problem!!!')
-                print('## Obtained data are different from the computed one')
-                print('##')
-                print('##')
+                LOG.error('Obtained data are different from the computed one')
 
                 notify_to_slack(('Obtained data (`%s`, `%s`, `[%s]`) ' +
                                  'are different from the ' +
@@ -125,7 +126,7 @@ def task():
 
                 return
         except Exception as e:
-            print('Elasticsearch could be not reachable: %s', str(e))
+            LOG.error('Elasticsearch could be not reachable: %s', str(e))
             notify_to_slack('Elasticsearch did not answered as expected')
 
     # compute a new check and push on the ELK pipeline
@@ -135,19 +136,19 @@ def task():
 
     try:
         r = requests.put(LOGSTASH_URL, json=data)
-        print('Pushing %s on the ELK pipeline' % new_check)
+        LOG.info('Pushing %s on the ELK pipeline' % new_check)
 
         while r.text != 'ok':
             time.sleep(5)
             r = requests(LOGSTASH_URL, json=data)
-            print('Re-pushing %s on the ELK pipeline' % new_check)
+            LOG.warn('Re-pushing %s on the ELK pipeline' % new_check)
 
         # save the check for future check
         with open(OLD_CHECK, 'w') as oc_file:
             oc_file.write(new_check)
             oc_file.close()
     except Exception as e:
-        print('Logstash could be not reachable: %s' % str(e))
+        LOG.error('Logstash could be not reachable: %s' % str(e))
         notify_to_slack('Logstash did not answered as expected')
 
 
